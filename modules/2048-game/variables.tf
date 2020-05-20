@@ -1,0 +1,3 @@
+variable "depends" {
+  type = any
+}

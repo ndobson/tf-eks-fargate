@@ -5,6 +5,7 @@ kind: Namespace
 metadata:
   name: "2048-game"
 EOF
+  depends_on = [var.depends]
 }
 
 resource "k8s_manifest" "deployment_2048-game" {
@@ -31,6 +32,7 @@ spec:
         ports:
         - containerPort: 80
 EOF
+  depends_on = [var.depends]
 }
 
 resource "k8s_manifest" "service_2048-game" {
@@ -49,6 +51,7 @@ spec:
   selector:
     app: "2048"
 EOF
+  depends_on = [var.depends]
 }
 
 resource "k8s_manifest" "ingress_2048-game" {
@@ -62,6 +65,7 @@ metadata:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internal
     alb.ingress.kubernetes.io/target-type: ip
+    external-dns.alpha.kubernetes.io/hostname: 2048-game.example.com
   labels:
     app: 2048-ingress
 spec:

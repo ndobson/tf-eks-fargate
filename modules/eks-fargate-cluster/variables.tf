@@ -1,51 +1,30 @@
-variable "region" {
-  type        = string
-  description = "AWS Region"
-}
-
-variable "availability_zones" {
-  type        = list(string)
-  description = "List of availability zones"
-}
-
-variable "vpc_cidr_block" {
-  type        = string
-  description = "VPC CIDR block"
-}
-
-variable "vpc_secondary_cidr_block" {
-  type        = string
-  description = "VPC secondary CIDR block"
-}
-
-variable "private_hosted_domain_name" {
-  type        = string
-  description = "Private hosted zone domain name"
-  default     = "example.com"
-}
-
 variable "namespace" {
+  description = "Namespace (e.g. `cp` or `cloudposse`)"
   type        = string
-  description = "Namespace, which could be your organization name, e.g. 'eg' or 'cp'"
   default     = ""
 }
 
-variable "stage" {
+variable "environment" {
   type        = string
-  description = "Stage, e.g. 'prod', 'staging', 'dev' or 'testing'"
+  default     = ""
+  description = "Environment, e.g. 'prod', 'staging', 'dev', 'pre-prod', 'UAT'"
+}
+
+variable "stage" {
+  description = "Stage (e.g. `prod`, `dev`, `staging`)"
+  type        = string
   default     = ""
 }
 
 variable "name" {
+  description = "Name  (e.g. `app` or `cluster`)"
   type        = string
-  description = "Solution name, e.g. 'app' or 'cluster'"
-  default     = ""
 }
 
 variable "delimiter" {
   type        = string
   default     = "-"
-  description = "Delimiter to be used between `name`, `namespace`, `stage`, etc."
+  description = "Delimiter to be used between `namespace`, `stage`, `name` and `attributes`"
 }
 
 variable "attributes" {
@@ -57,18 +36,33 @@ variable "attributes" {
 variable "tags" {
   type        = map(string)
   default     = {}
-  description = "Additional tags (e.g. `map('BusinessUnit`,`XYZ`)"
+  description = "Additional tags (e.g. map(`BusinessUnit`,`XYZ`)"
+}
+
+variable "region" {
+  type        = string
+  description = "AWS Region"
+}
+
+variable "vpc_id" {
+  type        = string
+  description = "VPC ID for the EKS cluster"
+}
+
+variable "cluster_subnet_ids" {
+  description = "A list of subnet IDs to launch the cluster in"
+  type        = list(string)
 }
 
 variable "kubernetes_version" {
   type        = string
-  default     = null
+  default     = "1.15"
   description = "Desired Kubernetes master version. If you do not specify a value, the latest available version is used"
 }
 
 variable "oidc_provider_enabled" {
   type        = bool
-  default     = true
+  default     = false
   description = "Create an IAM OIDC identity provider for the cluster, then you can create IAM roles to associate with a service account in the cluster, instead of using kiam or kube2iam. For more information, see https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html"
 }
 
@@ -100,4 +94,15 @@ variable "map_additional_iam_users" {
   }))
 
   default = []
+}
+
+variable "profile_subnet_ids" {
+  description = "Identifiers of private EC2 Subnets to associate with the EKS Fargate Profile. These subnets must have the following resource tag: kubernetes.io/cluster/CLUSTER_NAME (where CLUSTER_NAME is replaced with the name of the EKS Cluster)"
+  type        = list(string)
+}
+
+variable "private_hosted_zone_id" {
+  description = "Owner ID of the priavte hosted zone for external DNS"
+  type        = string
+  default     = ""
 }
