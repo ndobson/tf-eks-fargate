@@ -7,5 +7,4 @@ wget -qO- https://github.com/banzaicloud/terraform-provider-k8s/releases/downloa
 ```
 
 #### TODO:
-* Add private VPC endpoints for AWS Services required by ALB ingress controller.
 * incorporate k8s RBAC policies
