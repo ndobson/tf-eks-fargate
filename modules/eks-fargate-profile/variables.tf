@@ -1,30 +1,6 @@
-variable "namespace" {
-  type        = string
-  description = "Namespace, which could be your organization name, e.g. 'eg' or 'cp'"
-  default     = ""
-}
-
-variable "stage" {
-  type        = string
-  description = "Stage, e.g. 'prod', 'staging', 'dev', or 'test'"
-  default     = ""
-}
-
 variable "name" {
   type        = string
   description = "Solution name, e.g. 'app' or 'cluster'"
-}
-
-variable "delimiter" {
-  type        = string
-  default     = "-"
-  description = "Delimiter to be used between `namespace`, `stage`, `name` and `attributes`"
-}
-
-variable "attributes" {
-  type        = list(string)
-  default     = []
-  description = "Additional attributes (e.g. `1`)"
 }
 
 variable "tags" {
@@ -52,4 +28,12 @@ variable "subnet_ids" {
 variable "selectors" {
   type        = map(map(string))
   description = ""
+}
+
+# There is a bug with Fargate Profiles attempting to create in parallel in Terraform which isn't allowed by EKS Fargate
+# https://github.com/terraform-providers/terraform-provider-aws/issues/13372
+variable "fargate_profile_depends_on" {
+  # the value is irrelevant; we only care about
+  # dependencies for this one.
+  type = any
 }

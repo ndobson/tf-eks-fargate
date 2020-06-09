@@ -1,3 +1,15 @@
+resource "aws_ecr_repository" "repo_2048-game" {
+  name = "2048-game"
+}
+
+# Pulls 2048 docker image and pushes it into aws_ecr_repository
+resource "null_resource" "ecr_image" {
+  # Runs the build.sh script
+  provisioner "local-exec" {
+    command = "bash ${path.module}/bin/build.sh alexwhen/docker-2048:latest ${aws_ecr_repository.repo_2048-game.repository_url}:latest"
+  }
+}
+
 resource "k8s_manifest" "namespace_2048-game" {
   content = <<EOF
 apiVersion: v1
@@ -26,7 +38,7 @@ spec:
         app: "2048"
     spec:
       containers:
-      - image: alexwhen/docker-2048
+      - image: ${aws_ecr_repository.repo_2048-game.repository_url}:latest
         imagePullPolicy: Always
         name: "2048"
         ports:

@@ -1,36 +1,6 @@
-variable "namespace" {
-  description = "Namespace (e.g. `cp` or `cloudposse`)"
-  type        = string
-  default     = ""
-}
-
-variable "environment" {
-  type        = string
-  default     = ""
-  description = "Environment, e.g. 'prod', 'staging', 'dev', 'pre-prod', 'UAT'"
-}
-
-variable "stage" {
-  description = "Stage (e.g. `prod`, `dev`, `staging`)"
-  type        = string
-  default     = ""
-}
-
 variable "name" {
   description = "Name  (e.g. `app` or `cluster`)"
   type        = string
-}
-
-variable "delimiter" {
-  type        = string
-  default     = "-"
-  description = "Delimiter to be used between `namespace`, `stage`, `name` and `attributes`"
-}
-
-variable "attributes" {
-  type        = list(string)
-  default     = []
-  description = "Additional attributes (e.g. `1`)"
 }
 
 variable "tags" {
@@ -96,8 +66,18 @@ variable "map_additional_iam_users" {
   default = []
 }
 
-variable "profile_subnet_ids" {
+variable "private_subnet_ids" {
   description = "Identifiers of private EC2 Subnets to associate with the EKS Fargate Profile. These subnets must have the following resource tag: kubernetes.io/cluster/CLUSTER_NAME (where CLUSTER_NAME is replaced with the name of the EKS Cluster)"
+  type        = list(string)
+}
+
+variable "local_subnet_ids" {
+  description = "Identifiers of local EC2 Subnets to associate with the EKS Fargate Profile. These subnets must have the following resource tag: kubernetes.io/cluster/CLUSTER_NAME (where CLUSTER_NAME is replaced with the name of the EKS Cluster)"
+  type        = list(string)
+}
+
+variable "endpoint_route_tables" {
+  description = "List of route tables to add gateway endpoint route"
   type        = list(string)
 }
 

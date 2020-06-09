@@ -7,5 +7,3 @@ vpc_cidr_block = "10.1.0.0/26"
 vpc_secondary_cidr_block = "100.64.0.0/16"
 
 name = "eks"
-
-attributes = ["1"]

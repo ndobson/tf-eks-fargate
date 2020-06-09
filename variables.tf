@@ -24,34 +24,15 @@ variable "private_hosted_domain_name" {
   default     = "example.com"
 }
 
-variable "namespace" {
+variable "transit_gateway_id" {
   type        = string
-  description = "Namespace, which could be your organization name, e.g. 'eg' or 'cp'"
-  default     = ""
-}
-
-variable "stage" {
-  type        = string
-  description = "Stage, e.g. 'prod', 'staging', 'dev' or 'testing'"
-  default     = ""
+  description = "Transit Gateway ID"    
 }
 
 variable "name" {
   type        = string
   description = "Solution name, e.g. 'app' or 'cluster'"
   default     = ""
-}
-
-variable "delimiter" {
-  type        = string
-  default     = "-"
-  description = "Delimiter to be used between `name`, `namespace`, `stage`, etc."
-}
-
-variable "attributes" {
-  type        = list(string)
-  default     = []
-  description = "Additional attributes (e.g. `1`)"
 }
 
 variable "tags" {

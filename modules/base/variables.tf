@@ -1,42 +1,13 @@
-variable "namespace" {
-  description = "Namespace (e.g. `cp` or `cloudposse`)"
-  type        = string
-  default     = ""
-}
-
-variable "environment" {
-  type        = string
-  default     = ""
-  description = "Environment, e.g. 'prod', 'staging', 'dev', 'pre-prod', 'UAT'"
-}
-
-variable "stage" {
-  description = "Stage (e.g. `prod`, `dev`, `staging`)"
-  type        = string
-  default     = ""
-}
-
-variable "name" {
-  description = "Name  (e.g. `app` or `cluster`)"
-  type        = string
-}
-
-variable "delimiter" {
-  type        = string
-  default     = "-"
-  description = "Delimiter to be used between `namespace`, `stage`, `name` and `attributes`"
-}
-
-variable "attributes" {
-  type        = list(string)
-  default     = []
-  description = "Additional attributes (e.g. `1`)"
-}
-
 variable "tags" {
   type        = map(string)
   default     = {}
   description = "Additional tags (e.g. map(`BusinessUnit`,`XYZ`)"
+}
+
+variable "name" {
+  type        = string
+  description = "Solution name, e.g. 'app' or 'cluster'"
+  default     = ""
 }
 
 #####
@@ -61,7 +32,11 @@ variable "availability_zones" {
 #####
 
 variable "private_hosted_domain_name" {
-  type        = string
   description = "Private hosted zone domain name"
   default     = "example.com"
+}
+
+variable "transit_gateway_id" {
+  type        = string
+  description = "Transit Gateway ID"    
 }

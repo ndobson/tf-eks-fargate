@@ -1,8 +1,3 @@
-output "igw_id" {
-  value       = aws_internet_gateway.default.id
-  description = "The ID of the Internet Gateway"
-}
-
 output "vpc_id" {
   value       = aws_vpc.default.id
   description = "The ID of the VPC"

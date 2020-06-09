@@ -13,18 +13,8 @@ data "aws_eks_cluster_auth" "aws_iam_authenticator" {
   name = module.eks_fargate_cluster.eks_cluster_id
 }
 
-module "label" {
-    source     = "git::https://github.com/cloudposse/terraform-null-label.git?ref=tags/0.16.0"
-    namespace  = var.namespace
-    name       = var.name
-    stage      = var.stage
-    delimiter  = var.delimiter
-    attributes = compact(concat(var.attributes, list("cluster")))
-    tags       = var.tags
-}
-
 locals {
-    tags = merge(module.label.tags, map("kubernetes.io/cluster/${module.label.id}", "shared"))
+    tags = merge(var.tags, map("Name", var.name), map("kubernetes.io/cluster/${var.name}-cluster", "shared"))
 }
 
 ###
@@ -33,15 +23,13 @@ locals {
 
 module "base" {
   source                     = "./modules/base"
-  namespace                  = var.namespace
-  stage                      = var.stage
   name                       = var.name
-  attributes                 = var.attributes
   tags                       = local.tags
   vpc_cidr_block             = var.vpc_cidr_block
   vpc_secondary_cidr_block   = var.vpc_secondary_cidr_block
   availability_zones         = var.availability_zones
   private_hosted_domain_name = var.private_hosted_domain_name
+  transit_gateway_id         = var.transit_gateway_id
 }
 
 ###
@@ -50,37 +38,34 @@ module "base" {
 
 module "eks_fargate_cluster" {
   source                      = "./modules/eks-fargate-cluster"
-  namespace                   = var.namespace
-  stage                       = var.stage
   name                        = var.name
-  attributes                  = var.attributes
   tags                        = local.tags
   region                      = var.region
   vpc_id                      = module.base.vpc_id
-  cluster_subnet_ids          = concat(values(module.base.public_az_subnet_ids),values(module.base.private_az_subnet_ids))
+  cluster_subnet_ids          = concat(values(module.base.private_az_subnet_ids),values(module.base.local_az_subnet_ids))
   kubernetes_version          = var.kubernetes_version
   oidc_provider_enabled       = var.oidc_provider_enabled
   map_additional_aws_accounts = var.map_additional_aws_accounts
   map_additional_iam_roles    = var.map_additional_iam_roles
   map_additional_iam_users    = var.map_additional_iam_users
-  profile_subnet_ids          = values(module.base.private_az_subnet_ids)
+  private_subnet_ids          = values(module.base.private_az_subnet_ids)
+  local_subnet_ids            = values(module.base.local_az_subnet_ids)
+  endpoint_route_tables       = concat(values(module.base.private_az_route_table_ids), values(module.base.local_az_route_table_ids))
   private_hosted_zone_id      = module.base.private_hosted_zone_id
 }
 
-###
-# Deploy demo application
-###
+# ###
+# # Deploy demo application
+# ###
 
 # Create application namespace Fargate profile
 module "eks_fargate_profile_2048-game" {
-    source               = "./modules/eks-fargate-profile"
-    namespace            = var.namespace
-    stage                = var.stage
-    name                 = "2048-game"
-    attributes           = var.attributes
-    tags                 = var.tags
-    subnet_ids           = values(module.base.private_az_subnet_ids)
-    cluster_name         = module.eks_fargate_cluster.eks_cluster_id
+    source                     = "./modules/eks-fargate-profile"
+    fargate_profile_depends_on = "none"
+    name                       = "2048-game"
+    tags                       = var.tags
+    subnet_ids                 = values(module.base.local_az_subnet_ids)
+    cluster_name               = module.eks_fargate_cluster.eks_cluster_id
 
     selectors = {
         "2048-game" = {}
@@ -90,5 +75,5 @@ module "eks_fargate_profile_2048-game" {
 # Deploy test app
 module "k8s_2048-game" {
     source = "./modules/2048-game"
-    depends = module.eks_fargate_profile_2048-game.eks_fargate_profile_id # For dependency mapping
+    depends = module.eks_fargate_profile_2048-game.eks_fargate_profile_status # For dependency mapping
 }
