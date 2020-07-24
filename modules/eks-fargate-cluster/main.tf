@@ -8,23 +8,23 @@ data "aws_eks_cluster_auth" "aws_iam_authenticator" {
 
 # Create an EKS cluster with no nodegroups or Fargate profiles
 module "eks_cluster" {
-    source                = "git::https://github.com/cloudposse/terraform-aws-eks-cluster.git?ref=tags/0.22.0"
-    name                  = var.name
-    tags                  = var.tags
-    region                = var.region
-    vpc_id                = var.vpc_id
-    subnet_ids            = var.cluster_subnet_ids
-    kubernetes_version    = var.kubernetes_version
-    oidc_provider_enabled = var.oidc_provider_enabled
-    endpoint_private_access = true
-    map_additional_aws_accounts = var.map_additional_aws_accounts
-    map_additional_iam_roles = var.map_additional_iam_roles
-    map_additional_iam_users = var.map_additional_iam_users
+  source                      = "git::https://github.com/cloudposse/terraform-aws-eks-cluster.git?ref=tags/0.22.0"
+  name                        = var.name
+  tags                        = var.tags
+  region                      = var.region
+  vpc_id                      = var.vpc_id
+  subnet_ids                  = var.cluster_subnet_ids
+  kubernetes_version          = var.kubernetes_version
+  oidc_provider_enabled       = var.oidc_provider_enabled
+  endpoint_private_access     = true
+  map_additional_aws_accounts = var.map_additional_aws_accounts
+  map_additional_iam_roles    = var.map_additional_iam_roles
+  map_additional_iam_users    = var.map_additional_iam_users
 }
 
 module "vpc_endpoints" {
   source             = "../vpc-endpoint"
-  services           = ["ecr.dkr", "ecr.api", "s3", "logs", "sts", "ec2", "elasticloadbalancing"]
+  services           = ["ecr.dkr", "ecr.api", "s3", "logs", "sts", "ec2", "elasticloadbalancing", "appmesh-envoy-management"]
   vpc_id             = var.vpc_id
   name               = var.name
   subnet_ids         = var.local_subnet_ids
@@ -34,36 +34,66 @@ module "vpc_endpoints" {
 
 # Create Fargate profile for default and kube-system namespace
 module "eks_fargate_profile_default" {
-    source                     = "../eks-fargate-profile"
-    fargate_profile_depends_on = "none"
-    name                       = "default-fargate"
-    tags                       = var.tags
-    subnet_ids                 = var.local_subnet_ids
-    cluster_name               = module.eks_cluster.eks_cluster_id
+  source                     = "../eks-fargate-profile"
+  fargate_profile_depends_on = "none"
+  name                       = "default-fargate"
+  tags                       = var.tags
+  subnet_ids                 = var.local_subnet_ids
+  cluster_name               = module.eks_cluster.eks_cluster_id
 
-    selectors = {
-        default = {}
-        kube-system = {}
-    }
+  selectors = {
+    default     = {}
+    kube-system = {}
+  }
 }
 
 # Create Fargate profile for default and kube-system namespace
 module "eks_fargate_profile_default_egress" {
-    source                     = "../eks-fargate-profile"
-    fargate_profile_depends_on = module.eks_fargate_profile_default.eks_fargate_profile_status
-    name                       = "default-egress-fargate"
-    tags                       = var.tags
-    subnet_ids                 = var.private_subnet_ids
-    cluster_name               = module.eks_cluster.eks_cluster_id
+  source                     = "../eks-fargate-profile"
+  fargate_profile_depends_on = module.eks_fargate_profile_default.eks_fargate_profile_status
+  name                       = "default-egress-fargate"
+  tags                       = var.tags
+  subnet_ids                 = var.private_subnet_ids
+  cluster_name               = module.eks_cluster.eks_cluster_id
 
-    selectors = {
-        default = {
-          placement = "egress"
-        }
-        kube-system = {
-          placement = "egress"
-        }
+  selectors = {
+    default = {
+      placement = "egress"
     }
+    kube-system = {
+      placement = "egress"
+    }
+  }
+}
+
+# Create Fargate profile for default and kube-system namespace
+module "eks_fargate_profile_appmesh" {
+  source                     = "../eks-fargate-profile"
+  fargate_profile_depends_on = module.eks_fargate_profile_default.eks_fargate_profile_status
+  name                       = "appmesh-system"
+  tags                       = var.tags
+  subnet_ids                 = var.private_subnet_ids
+  cluster_name               = module.eks_cluster.eks_cluster_id
+
+  selectors = {
+    appmesh-system            = {},
+    howto-k8s-ingress-gateway = {}
+  }
+}
+
+module "eks_node_group" {
+  source             = "../eks-node-group"
+  name               = "${var.name}-node-group"
+  tags               = merge(var.tags, map("Name", "${var.name}-node-group"))
+  subnet_ids         = var.private_subnet_ids
+  instance_types     = var.instance_types
+  desired_size       = var.desired_size
+  min_size           = var.min_size
+  max_size           = var.max_size
+  cluster_name       = module.eks_cluster.eks_cluster_id
+  kubernetes_version = var.kubernetes_version
+  kubernetes_labels  = var.kubernetes_labels
+  disk_size          = var.disk_size
 }
 
 # TODO: This is a hacky workaround to this requirement of patching the coredns deployment, build a better solution.
@@ -116,7 +146,7 @@ EOF
 }
 
 provider "kubernetes" {
-  alias = "eks"
+  alias                  = "eks"
   host                   = module.eks_cluster.eks_cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks_cluster.eks_cluster_certificate_authority_data)
   token                  = data.aws_eks_cluster_auth.aws_iam_authenticator.token
@@ -135,7 +165,7 @@ module "alb_ingress_controller" {
   k8s_namespace    = "kube-system"
 
   k8s_cluster_name = module.eks_cluster.eks_cluster_id
-  aws_tags = merge(var.tags, map("FargateProfile", module.eks_fargate_profile_default_egress.eks_fargate_profile_id))
+  aws_tags         = merge(var.tags, map("FargateProfile", module.eks_fargate_profile_default_egress.eks_fargate_profile_id))
 
   k8s_pod_labels = {
     placement = "egress"
@@ -149,8 +179,8 @@ module "external-dns" {
   source = "../external-dns"
 
   eks_cluster_name = module.eks_cluster.eks_cluster_id
-  tags = merge(var.tags, map("FargateProfile", module.eks_fargate_profile_default_egress.eks_fargate_profile_id))
-  owner_id = var.private_hosted_zone_id
+  tags             = merge(var.tags, map("FargateProfile", module.eks_fargate_profile_default_egress.eks_fargate_profile_id))
+  owner_id         = var.private_hosted_zone_id
   kubernetes_resources_labels = {
     placement = "egress"
   }

@@ -52,6 +52,12 @@ module "eks_fargate_cluster" {
   local_subnet_ids            = values(module.base.local_az_subnet_ids)
   endpoint_route_tables       = concat(values(module.base.private_az_route_table_ids), values(module.base.local_az_route_table_ids))
   private_hosted_zone_id      = module.base.private_hosted_zone_id
+
+  instance_types = ["t3.small"]
+  desired_size = 2
+  max_size = 3
+  min_size = 2
+  disk_size = 20
 }
 
 # ###
