@@ -10,84 +10,108 @@ resource "null_resource" "ecr_image" {
   }
 }
 
-resource "k8s_manifest" "namespace_2048-game" {
-  content = <<EOF
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: "2048-game"
-EOF
+resource "kubernetes_namespace" "namespace_2048-game" {
+  metadata {
+    name = "2048-game"
+  }
   depends_on = [var.depends]
 }
 
-resource "k8s_manifest" "deployment_2048-game" {
-  content = <<EOF
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: "2048-deployment"
-  namespace: "2048-game"
-spec:
-  selector:
-    matchLabels:
-      app: "2048"
-  replicas: 5
-  template:
-    metadata:
-      labels:
-        app: "2048"
-    spec:
-      containers:
-      - image: ${aws_ecr_repository.repo_2048-game.repository_url}:latest
-        imagePullPolicy: Always
-        name: "2048"
-        ports:
-        - containerPort: 80
-EOF
+resource "kubernetes_deployment" "deployment_2048-game" {
+  metadata {
+    name      = "2048-deployment"
+    namespace = "2048-game"
+  }
+
+  spec {
+    replicas = 4
+
+    selector {
+      match_labels = {
+        app = "2048"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "2048"
+        }
+      }
+
+      spec {
+        container {
+          image = "${aws_ecr_repository.repo_2048-game.repository_url}:latest"
+          name  = "2048"
+
+          resources {
+            limits {
+              cpu    = "0.5"
+              memory = "512Mi"
+            }
+            requests {
+              cpu    = "250m"
+              memory = "50Mi"
+            }
+          }
+
+          port {
+            container_port = 80
+          }
+        }
+      }
+    }
+  }
   depends_on = [var.depends]
 }
 
-resource "k8s_manifest" "service_2048-game" {
-  content = <<EOF
-apiVersion: v1
-kind: Service
-metadata:
-  name: "service-2048"
-  namespace: "2048-game"
-spec:
-  ports:
-    - port: 80
-      targetPort: 80
-      protocol: TCP
-  type: NodePort
-  selector:
-    app: "2048"
-EOF
+resource "kubernetes_service" "service_2048-game" {
+  metadata {
+    name      = "service-2048"
+    namespace = "2048-game"
+  }
+  spec {
+    selector = {
+      app = "2048"
+    }
+    port {
+      port        = 80
+      target_port = 80
+      protocol    = "TCP"
+    }
+    type = "NodePort"
+  }
   depends_on = [var.depends]
 }
 
-resource "k8s_manifest" "ingress_2048-game" {
-  content = <<EOF
-apiVersion: extensions/v1beta1
-kind: Ingress
-metadata:
-  name: "2048-ingress"
-  namespace: "2048-game"
-  annotations:
-    kubernetes.io/ingress.class: alb
-    alb.ingress.kubernetes.io/scheme: internal
-    alb.ingress.kubernetes.io/target-type: ip
-    external-dns.alpha.kubernetes.io/hostname: 2048-game.example.com
-  labels:
-    app: 2048-ingress
-spec:
-  rules:
-    - http:
-        paths:
-          - path: /*
-            backend:
-              serviceName: "service-2048"
-              servicePort: 80
-EOF
-  depends_on = [k8s_manifest.service_2048-game]
+resource "kubernetes_ingress" "ingress_2048-game" {
+  metadata {
+    name      = "2048-ingress"
+    namespace = "2048-game"
+    annotations = {
+      "kubernetes.io/ingress.class"               = "alb"
+      "alb.ingress.kubernetes.io/scheme"          = "internet-facing"
+      "alb.ingress.kubernetes.io/target-type"     = "ip"
+      "external-dns.alpha.kubernetes.io/hostname" = "2048-game.example.com"
+    }
+    labels = {
+      app = "2048-ingress"
+    }
+  }
+
+  spec {
+    rule {
+      http {
+        path {
+          backend {
+            service_name = "service-2048"
+            service_port = 80
+          }
+
+          path = "/*"
+        }
+      }
+    }
+  }
+  depends_on = [kubernetes_service.service_2048-game]
 }

@@ -35,8 +35,3 @@ variable "private_hosted_domain_name" {
   description = "Private hosted zone domain name"
   default     = "example.com"
 }
-
-variable "transit_gateway_id" {
-  type        = string
-  description = "Transit Gateway ID"    
-}

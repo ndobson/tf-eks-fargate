@@ -1,10 +1,57 @@
-# EKS Fargate Working Example
+# EKS Fargate Terraform Example
 
-Install [third party k8s terraform plugin](https://github.com/banzaicloud/terraform-provider-k8s):
+## Architecture Overview
+
+This reference architecture, implemented via Terraform, will perform the following steps:
+
+- Create a VPC and required subnets
+- Create a Route53 private hosted zone
+- Create an EKS Cluster
+- Create VPC Endpoints required for private clusters
+- Create an EKS Fargate Profile for the `kube-system` namespace for cluster-wide services such as CoreDNS, external-dns, and the ALB Ingress Controller
+- Deploy the ALB Ingress Controller and External DNS in the cluster.
+- Create an EKS Fargate Profile for the sample application namespace
+- Create and ECR repo for the sample application
+- Deploy the sample 2048 application
+
+![EKS Fargate Cluster](images/EKSFargateCluster.png)
+
+## Prerequisites
+
+### Tools
+
+- Docker must be running locally to pull the demo app container and push it to ECR
+- Terraform 0.12
+- kubectl installed
+
+### Create the `terraform.tfvars` file with these required variables
+
 ```
-mkdir -p ~/.terraform.d/plugins
-wget -qO- https://github.com/banzaicloud/terraform-provider-k8s/releases/download/v0.7.6/terraform-provider-k8s_0.7.6_darwin_amd64.tar.gz | tar xvz - -C ~/.terraform.d/plugins
+# sample terraform.tfvars
+region = "us-east-2"
+availability_zones = ["us-east-2a", "us-east-2b" ]
+vpc_cidr_block = "10.1.0.0/26"
+vpc_secondary_cidr_block = "100.64.0.0/16"
+name = "eks"
 ```
 
-#### TODO:
-* incorporate k8s RBAC policies
+## Usage
+
+### Run the following commands to provision the infrastructure
+
+```
+terraform init
+terraform plan
+terraform apply
+
+# Setup the context for the cluster
+aws eks update-kubeconfig --name eks
+```
+
+### Get URL of sample application ALB
+
+```
+export ALB_ADDRESS=$(kubectl get ingress -n 2048-game -o json | jq -r '.items[].status.loadBalancer.ingress[].hostname')
+
+echo "http://${ALB_ADDRESS}"
+```

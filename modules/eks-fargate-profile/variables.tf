@@ -9,12 +9,6 @@ variable "tags" {
   description = "Additional tags (e.g. `{ BusinessUnit = \"XYZ\" }`"
 }
 
-variable "enabled" {
-  type        = bool
-  description = "Whether to create the resources. Set to `false` to prevent the module from creating any resources"
-  default     = true
-}
-
 variable "cluster_name" {
   type        = string
   description = "The name of the EKS cluster"

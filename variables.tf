@@ -24,15 +24,9 @@ variable "private_hosted_domain_name" {
   default     = "example.com"
 }
 
-variable "transit_gateway_id" {
-  type        = string
-  description = "Transit Gateway ID"    
-}
-
 variable "name" {
   type        = string
   description = "Solution name, e.g. 'app' or 'cluster'"
-  default     = ""
 }
 
 variable "tags" {

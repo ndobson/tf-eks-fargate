@@ -1,5 +1,7 @@
 locals {
-  route_count = var.tgw_id == "" ? 0 : length(var.availability_zones)
+  public_count              = var.type == "public" ? length(var.availability_zones) : 0
+  public_nat_gateways_count = var.type == "public" ? length(var.availability_zones) : 0
+  private_route_count       = length(var.az_ngw_ids)
 }
 
 resource "aws_subnet" "this" {
@@ -67,6 +69,29 @@ resource "aws_route_table" "this" {
   )
 }
 
+resource "aws_route" "public" {
+  count                  = local.public_count
+  route_table_id         = element(aws_route_table.this.*.id, count.index)
+  gateway_id             = var.igw_id
+  destination_cidr_block = "0.0.0.0/0"
+  depends_on             = [aws_route_table.this]
+}
+
+resource "aws_route" "private" {
+  count = local.private_route_count
+  route_table_id = zipmap(
+    var.availability_zones,
+    matchkeys(
+      aws_route_table.this.*.id,
+      aws_route_table.this.*.tags.AZ,
+      var.availability_zones,
+    ),
+  )[element(var.availability_zones, count.index)]
+  nat_gateway_id         = var.az_ngw_ids[element(keys(var.az_ngw_ids), count.index)]
+  destination_cidr_block = "0.0.0.0/0"
+  depends_on             = [aws_route_table.this]
+}
+
 resource "aws_route_table_association" "this" {
   count          = length(var.availability_zones)
   subnet_id      = element(aws_subnet.this.*.id, count.index)
@@ -77,17 +102,60 @@ resource "aws_route_table_association" "this" {
   ]
 }
 
-resource "aws_route" "default" {
-  count = local.route_count
-  route_table_id = zipmap(
-    var.availability_zones,
-    matchkeys(
-      aws_route_table.this.*.id,
-      aws_route_table.this.*.tags.AZ,
-      var.availability_zones,
-    ),
-  )[element(var.availability_zones, count.index)]
-  transit_gateway_id     = var.tgw_id
-  destination_cidr_block = "0.0.0.0/0"
-  depends_on             = [aws_route_table.this]
+resource "aws_eip" "public" {
+  count = local.public_nat_gateways_count
+  vpc   = true
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_nat_gateway" "public" {
+  count         = local.public_nat_gateways_count
+  allocation_id = element(aws_eip.public.*.id, count.index)
+  subnet_id     = element(aws_subnet.this.*.id, count.index)
+  depends_on    = [aws_subnet.this]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = merge(
+    var.tags,
+    {
+      "Name" = "${var.name}-${var.type}-${element(var.availability_zones, count.index)}"
+      "AZ"   = element(var.availability_zones, count.index)
+      "Type" = var.type
+    },
+  )
+}
+
+# Dummy list of NAT Gateway IDs to use in the outputs for private subnets
+# Needed due to Terraform limitation of not allowing using conditionals with maps and lists
+locals {
+  dummy_az_ngw_ids = slice(
+    [
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+    ],
+    0,
+    length(var.availability_zones),
+  )
 }

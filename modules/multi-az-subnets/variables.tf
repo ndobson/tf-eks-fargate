@@ -35,6 +35,18 @@ variable "cidr_block" {
   description = "Base CIDR block which is divided into subnet CIDR blocks (e.g. `10.0.0.0/16`)"
 }
 
+variable "igw_id" {
+  type        = string
+  description = "Internet Gateway ID that is used as a default route when creating public subnets (e.g. `igw-9c26a123`)"
+  default     = ""
+}
+
+variable "az_ngw_ids" {
+  type        = map(string)
+  description = "Only for private subnets. Map of AZ names to NAT Gateway IDs that are used as default routes when creating private subnets"
+  default     = {}
+}
+
 variable "private_network_acl_egress" {
   description = "Egress network ACL rules"
   type        = list(map(string))
