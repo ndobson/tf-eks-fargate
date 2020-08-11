@@ -2,14 +2,14 @@
 
 ## Architecture Overview
 
-This reference architecture, implemented via Terraform, will perform the following steps:
+This reference architecture, implemented via Terraform, will create an EKS cluster with a Fargate-only data plane and deploy a sample application exposed via an internet-facing ALB. It will perform the following steps:
 
 - Create a VPC and required subnets
 - Create a Route53 private hosted zone
 - Create an EKS Cluster
 - Create VPC Endpoints required for private clusters
 - Create an EKS Fargate Profile for the `kube-system` namespace for cluster-wide services such as CoreDNS, external-dns, and the ALB Ingress Controller
-- Deploy the ALB Ingress Controller and External DNS in the cluster.
+- Deploy the ALB Ingress Controller and External DNS in the cluster
 - Create an EKS Fargate Profile for the sample application namespace
 - Create and ECR repo for the sample application
 - Deploy the sample 2048 application
@@ -23,6 +23,7 @@ This reference architecture, implemented via Terraform, will perform the followi
 - Docker must be running locally to pull the demo app container and push it to ECR
 - Terraform 0.12
 - kubectl installed
+- awscli installed
 
 ### Create the `terraform.tfvars` file with these required variables
 
